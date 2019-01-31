@@ -1,7 +1,5 @@
 package webserver.dat.sem2;
 
-import com.sun.xml.internal.bind.v2.TODO;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
@@ -20,8 +18,7 @@ import java.util.Map.Entry;
 public class ServerMain {
 
     public static void main( String[] args ) throws Exception {
-        picoServer02();
-
+        picoServer06();
     }
 
     /*
@@ -45,13 +42,8 @@ public class ServerMain {
     Same server, but this one writes to system.out to show what info we get
     from the browser/client when we it sends a request to the server.
     It still just tell the browser what time it is.
-
-
-    Jeg er kommet til at sætte den til at lukke serveren ned og genstate den. For at få den
-    til at fejle, skal man ind i edit configurations og klikke af i "allow running in paralel"
      */
     private static void picoServer02() throws Exception {
-
         final ServerSocket server = new ServerSocket( 8080 );
         System.out.println( "Listening for connection on port 8080 ...." );
         while ( true ) { // keep listening (as is normal for a server)
@@ -75,7 +67,7 @@ public class ServerMain {
     }
 
     /*
-    This server uses a HttpRequest object to *parse* the text-request into a 
+    This server uses a HttpRequest object to *parse* the text-request into a
     java object we can then use to examine the different aspect of the request
     using the getters of the HttpRequest object.
     It still just returns the date to the client.
@@ -93,14 +85,14 @@ public class ServerMain {
                 System.out.println( "Protocol: " + req.getProtocol() );
                 System.out.println( "Path: " + req.getPath() );
                 System.out.println( "Parameters:" );
-                for ( Entry e : req.getParameters().entrySet() ) {    // TODO: 2019-01-30 Brug det her når vi skal have alle parametrene ud i den røde opgave. 
+                for ( Entry e : req.getParameters().entrySet() ) {
                     System.out.println( "    " + e.getKey() + ": " + e.getValue() );
                 }
                 System.out.println( "Headers:" );
                 for ( Entry e : req.getHeaders().entrySet() ) {
                     System.out.println( "    " + e.getKey() + ": " + e.getValue() );
                 }
-                
+
 
                 System.out.println( "---- BODY ----" );
                 System.out.println( req.getBody() );
@@ -119,15 +111,13 @@ public class ServerMain {
     private static void picoServer04() throws Exception {
         final ServerSocket server = new ServerSocket( 8080 );
         System.out.println( "Listening for connection on port 8080 ...." );
-        String root = "pages/shop";
-//        String root = "pages";
+        String root = "pages";
         while ( true ) { // keep listening (as is normal for a server)
             try ( Socket socket = server.accept() ) {
                 System.out.println( "-----------------" );
                 HttpRequest req = new HttpRequest( socket.getInputStream() );
                 String path = root + req.getPath();
                 String html = getResourceFileContents( path );
-                System.out.println(path);
                 String httpResponse = "HTTP/1.1 200 OK\r\n\r\n" + html;
                 socket.getOutputStream().write( httpResponse.getBytes( "UTF-8" ) );
                 System.out.println( "<<<<<<<<<<<<<<<<<" );
@@ -175,9 +165,10 @@ public class ServerMain {
         final ServerSocket server = new ServerSocket( 8080 );
         System.out.println( "Listening for connection on port 8080 ...." );
         String root = "pages";
+//        String root = "pages";
         int count = 0;
         while ( true ) { // keep listening (as is normal for a server)
-            Socket socket = server.accept();;
+            Socket socket = server.accept();
             try {
                 System.out.println( "---- reqno: " + count + " ----" );
                 HttpRequest req = new HttpRequest( socket.getInputStream() );
@@ -190,15 +181,27 @@ public class ServerMain {
                     String res = "";
                     switch ( path ) {
                         case "/addournumbers":
-                            if (req.getParameter("operator").equalsIgnoreCase("add")){
-                            res = addOurNumbers( req );
+                            if (req.getParameter("operator").equalsIgnoreCase("add")) {
+                                res = addOurNumbers(req);
+                                break;
                             }
                             if (req.getParameter("operator").equalsIgnoreCase("mul")){
-                            res = multiplyOurNumbers(req);
-                                // TODO: 2019-01-30 se om I ikke kan nøjes med en fil til at returnere resultaterne.
-                            
+                                res = mulOurNumbers(req);
+                                break;
                             }
-
+                            if (req.getParameter("operator").equalsIgnoreCase("div")){
+                                res = divOurNumbers(req);
+                                break;
+                            }
+                            if (req.getParameter("operator").equalsIgnoreCase("minus")){
+                                res = minusOurNumbers(req);
+                                break;
+                            }
+                        case"/calculate":
+                            res= calOurNumbers(req);
+                            break;
+                        case "/getAllParameters":
+                            res = printAllParameters(req);
                             break;
                         default:
                             res = "Unknown path: " + path;
@@ -219,6 +222,62 @@ public class ServerMain {
 //        System.out.println( getFile("adding.html") );
     }
 
+    private static String printAllParameters(HttpRequest req) {
+
+        String s="";
+
+        for ( Entry e : req.getParameters().entrySet() ) {
+            s += "    " + e.getKey() + ": " + e.getValue() + "<br><br>";
+        }
+
+
+        String res= "";
+
+        try {
+             res = getResourceFileContents("allParam.tmpl");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        res = res.replace("$0",s);
+
+        return res;
+    }
+
+    private static String mulOurNumbers(HttpRequest req) {
+
+
+        String first = req.getParameter( "firstnumber" );
+        String second = req.getParameter( "secondnumber" );
+        int fi = Integer.parseInt( first );
+        int si = Integer.parseInt( second );
+
+        return generateHTML("result.tmpl",first,second,String.valueOf(fi*si),"x");
+    }
+
+    private static String minusOurNumbers(HttpRequest req) {
+
+
+        String first = req.getParameter( "firstnumber" );
+        String second = req.getParameter( "secondnumber" );
+        int fi = Integer.parseInt( first );
+        int si = Integer.parseInt( second );
+
+        return generateHTML("result.tmpl",first,second,String.valueOf(fi-si),"x");
+    }
+
+    private static String divOurNumbers(HttpRequest req) {
+
+
+        String first = req.getParameter( "firstnumber" );
+        String second = req.getParameter( "secondnumber" );
+        int fi = Integer.parseInt( first );
+        int si = Integer.parseInt( second );
+
+        return generateHTML("result.tmpl",first,second,String.valueOf(fi/si),"x");
+    }
+
+
     /*
     It is not part of the curriculum (pensum) to understand this method.
     You are more than welcome to bang your head on it though.
@@ -233,57 +292,69 @@ public class ServerMain {
 
     }
 
+    private static  String generateHTML(String file, String a, String b, String c, String opr) {
+
+        String res = null;
+        try {
+            res = getResourceFileContents("result.tmpl");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        res = res.replace( "$0", a);
+        res = res.replace( "$1", b);
+        res = res.replace( "$2", c );
+        res = res.replace("$3",opr);
+        return res;
+
+
+    }
+
+
+    private static String calOurNumbers( HttpRequest req ) {
+        String first = req.getParameter( "firstnumber" );
+        String second = req.getParameter( "secondnumber" );
+        int fi = Integer.parseInt( first );
+        int si = Integer.parseInt( second );
+
+        String operator = req.getParameter("operator");
+
+
+        String resultat = "";
+
+        switch (operator) {
+            case "+":
+                resultat = String.valueOf(fi+si);
+                break;
+            case "*":
+                resultat = String.valueOf(fi*si);
+                break;
+            case "-":
+                resultat = String.valueOf(fi-si);
+                break;
+            case "/":
+                resultat = String.valueOf(fi/si);
+                break;
+            case "=":
+                resultat = String.valueOf(fi == si);
+                break;
+            default:
+                resultat = "666";
+        }
+
+        return generateHTML("result.tmpl", first , second, resultat, operator);
+
+    }
+
+
+
+
     private static String addOurNumbers( HttpRequest req ) {
         String first = req.getParameter( "firstnumber" );
         String second = req.getParameter( "secondnumber" );
         int fi = Integer.parseInt( first );
         int si = Integer.parseInt( second );
 
-        int r1 = fi + si;
-        String resultat = String.valueOf(r1);
-//        String res = RES;                     // TODO: 2019-01-30 det er her vi skal stikke
-//        String res = "";
-//        try {
-//             res = getResourceFileContents("result.tmpl");                     // TODO: 2019-01-30 det er her vi skal stikke
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//        res = res.replace( "$0", first);
-//        res = res.replace( "$1", second);
-//        res = res.replace( "$2", String.valueOf( fi+si ) );
-//
-
-
-        return generateHTML("result.tmpl", first, second, resultat, req.getParameter("operator"));
-
-    }
-
-    private static String multiplyOurNumbers( HttpRequest req ) {
-        String first = req.getParameter( "firstnumber" );
-        String second = req.getParameter( "secondnumber" );
-        int fi = Integer.parseInt( first );
-        int si = Integer.parseInt( second );
-
-        int r1 = fi * si;
-        String resultat = String.valueOf(r1);
-//        String res = RES;                     // TODO: 2019-01-30 det er her vi skal stikke
-//        String res = "";
-//        try {
-//             res = getResourceFileContents("result.tmpl");                     // TODO: 2019-01-30 det er her vi skal stikke
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//        res = res.replace( "$0", first);
-//        res = res.replace( "$1", second);
-//        res = res.replace( "$2", String.valueOf( fi+si ) );
-//
-
-
-        return generateHTML("result.tmpl", first, second, resultat,req.getParameter("operator"));
-
-//        return res;
-
-
+        return generateHTML("result.tmpl",first,second,String.valueOf(fi+si),"+");
     }
 
     private static String RES = "<!DOCTYPE html>\n"
@@ -298,27 +369,5 @@ public class ServerMain {
             + "        <a href=\"adding.html\">Læg to andre tal sammen</a>\n"
             + "    </body>\n"
             + "</html>\n";
-
-
-
-    private static String generateHTML(String file, String a, String b, String c, String operator) {
-
-        String res = "";
-        try {
-            res = getResourceFileContents("result.tmpl");                     // TODO: 2019-01-30 det er her vi skal stikke
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        res = res.replace( "$0", a);
-        res = res.replace( "$1", b);
-        res = res.replace( "$2", String.valueOf( c ) );
-        res = res.replace("$Opr", operator);
-
-        return res;
-
-
-
-        
-    }
 
 }
