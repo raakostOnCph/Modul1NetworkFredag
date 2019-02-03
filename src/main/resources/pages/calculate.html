@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<!--
+This is a sample html file used to confirm that our server 
+can read from the resource directory
+-->
+<html lang="da">
+    <head>
+        <title>Adding form</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <h1>Super - vi skal lige lægge to tal sammen</h1>
+        <form method="GET" action="/calculate">
+        <!--<form method="GET" action="/addournumbers">-->
+            Første tal:<br>
+            <!--prøv at lave en fejl i navnet her, og se hvad der sker i browseren-->
+            <input type="text" name="firstnumber" value="17"><br>
+            Andet tal:<br>
+            <input type="text" name="secondnumber" value="13"><br><br>
+            <input type="submit" name="operator" value="+">
+            <input type="submit" name="operator" value="-">
+            <input type="submit" name="operator" value="*">
+            <input type="submit" name="operator" value="/">
+            <input type="submit" name="operator" value="=">
+            <!--$res-->
+        </form>
+    </body>
+</html>
