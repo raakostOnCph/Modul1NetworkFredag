@@ -4,6 +4,7 @@ import com.sun.xml.internal.bind.v2.TODO;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -11,6 +12,8 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.util.Date;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  The purpose of ServerMain is to...
@@ -143,27 +146,48 @@ public class ServerMain {
         final ServerSocket server = new ServerSocket( 8080 );
         System.out.println( "Listening for connection on port 8080 ...." );
         String root = "pages";
+            ExecutorService leder = Executors.newFixedThreadPool(4); //
         while ( true ) { // keep listening (as is normal for a server)
-            Socket socket = server.accept();;
-            try {
-                System.out.println( "-----------------" );
-                HttpRequest req = new HttpRequest( socket.getInputStream() );
-                String path = root + req.getPath();
-                String html = getResourceFileContents( path );
-                String httpResponse = "HTTP/1.1 200 OK\r\n\r\n" + html;
-                socket.getOutputStream().write( httpResponse.getBytes( "UTF-8" ) );
-                System.out.println( "<<<<<<<<<<<<<<<<<" );
-            } catch ( Exception ex ) {
-                String httpResponse = "HTTP/1.1 500 Internal error\r\n\r\n"
-                        + "UUUUPS: " + ex.getLocalizedMessage();
-                socket.getOutputStream().write( httpResponse.getBytes( "UTF-8" ) );
-            } finally {
-                if ( socket != null ) {
-                    socket.close();
+
+            Socket socket = server.accept();
+
+            leder.submit(new Runnable() {
+                @Override
+                public void run() {
+
+                    try {
+                    MakeResponse(root, socket);
+
+                    }catch (IOException e) {
+                        System.out.println(e.getMessage());
+                    }
                 }
-            }
+            });
+        leder.shutdown(); // Jeg synes at den skal være her, men det kommer lidt an på had
+            // hvad tråden laver vel egentlig.
+
         }
 //        System.out.println( getFile("adding.html") );
+    }
+
+    private static void MakeResponse(String root, Socket socket) throws IOException {
+        try {
+            System.out.println( "-----------------" );
+            HttpRequest req = new HttpRequest( socket.getInputStream() );
+            String path = root + req.getPath();
+            String html = getResourceFileContents( path );
+            String httpResponse = "HTTP/1.1 200 OK\r\n\r\n" + html;
+            socket.getOutputStream().write( httpResponse.getBytes( "UTF-8" ) );
+            System.out.println( "<<<<<<<<<<<<<<<<<" );
+        } catch ( Exception ex ) {
+            String httpResponse = "HTTP/1.1 500 Internal error\r\n\r\n"
+                    + "UUUUPS: " + ex.getLocalizedMessage();
+            socket.getOutputStream().write( httpResponse.getBytes( "UTF-8" ) );
+        } finally {
+            if ( socket != null ) {
+                socket.close();
+            }
+        }
     }
 
     /*
@@ -175,8 +199,10 @@ public class ServerMain {
         System.out.println( "Listening for connection on port 8080 ...." );
         String root = "pages";
         int count = 0;
+
         while ( true ) { // keep listening (as is normal for a server)
             Socket socket = server.accept();;
+
             try {
                 System.out.println( "---- reqno: " + count + " ----" );
                 HttpRequest req = new HttpRequest( socket.getInputStream() );
